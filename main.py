@@ -1,83 +1,95 @@
-# KidsCanCode - Game Development with Pygame video series
-# Jumpy! (a platform game) - Part 2
-# Video link: https://www.youtube.com/watch?v=8LRI0RLKyt0
-# Player movement
-
+# Sprite classes for platform game
+# © 2019 KidsCanCode LLC / All rights reserved.
+# mr cozort planted a landmine by importing Sprite directly...
 import pygame as pg
-import random
+from threading import *
+import time
+from pygame.sprite import Sprite
 from settings import *
-from sprites import *
+vec = pg.math.Vector2
 
-class Game:
-    def __init__(self):
-        # initialize game window, etc
-        pg.init()
-        pg.mixer.init()
-        self.screen = pg.display.set_mode((WIDTH, HEIGHT))
-        pg.display.set_caption(TITLE)
-        self.clock = pg.time.Clock()
-        self.running = True
+class Player(Sprite):
+    # include game parameter to pass game class as argument in main...
+    def __init__(self, game):
+        Sprite.__init__(self)
+        self.game = game
+        self.image = pg.Surface((30, 40))
+        self.image.fill(WHITE)
+        self.rect = self.image.get_rect()
+        self.rect.center = (WIDTH / 2, HEIGHT / 2)
+        self.pos = vec(WIDTH / 2, HEIGHT / 2)
+        self.vel = vec(0, 0)
+        self.acc = vec(0, 0)
+        self.hitpoints = 100
+    def pew(self):
+        lazer = Pewpew(self.game, self.pos.x + self.rect.width/2, self.pos.y, 10, 10)
+        # print("trying to pewpewpew")
+        self.game.all_sprites.add(lazer)
+        self.game.platforms.add(lazer)
+        self.game.projectiles.add(lazer)
+        
+    def jump(self):
+        self.rect.x += 1
+        hits = pg.sprite.spritecollide(self, self.game.platforms, False)
+        self.rect.x -= 1
+        if hits: 
+            self.vel.y = -15
+    def update(self):
+        self.acc = vec(0, 0.5)
+        keys = pg.key.get_pressed()
+        if keys[pg.K_a]:
+            self.acc.x = -PLAYER_ACC
+        if keys[pg.K_d]:
+            self.acc.x = PLAYER_ACC
+        if keys[pg.K_w]:
+            self.pew()
+            # self.acc.y = -PLAYER_ACC
+        if keys[pg.K_s]:
+            self.acc.y = PLAYER_ACC
+        # ALERT - Mr. Cozort did this WAY differently than Mr. Bradfield...
+        if keys[pg.K_SPACE]:
+            self.jump()
+        # apply friction
+        self.acc.x += self.vel.x * PLAYER_FRICTION
+        # self.acc.y += self.vel.y * PLAYER_FRICTION
+        # equations of motion
+        self.vel += self.acc
+        self.pos += self.vel + 0.5 * self.acc
+        # wrap around the sides of the screen
+        if self.pos.x > WIDTH:
+            self.pos.x = 0
+        if self.pos.x < 0:
+            self.pos.x = WIDTH
+        if self.pos.y < 0:
+            self.pos.y = HEIGHT
+        if self.pos.y > HEIGHT:
+            self.pos.y = 0
+        
+        
+        self.rect.midbottom = self.pos
+class Platform(Sprite):
+    def __init__(self, x, y, w, h):
+        Sprite.__init__(self)
+        self.image = pg.Surface((w, h))
+        self.image.fill(BLUE)
+        self.rect = self.image.get_rect()
+        self.rect.x = x
+        self.rect.y = y
 
-    def new(self):
-        # start a new game
-        self.all_sprites = pg.sprite.Group()
-        self.player = Player()
-        self.all_sprites.add(self.player)
-        self.run()
-
-    def run(self):
-        # Game Loop
-        self.playing = True
-        while self.playing:
-            self.clock.tick(FPS)
-            self.events()
-            self.update()
-            self.draw()
+class Pewpew(Sprite):
+    def __init__(self, game, x, y, w, h):
+        Sprite.__init__(self)
+        self.game = game
+        # allows player to communicate back anf forth with computer
+        self.image = pg.Surface((w, h))
+        self.image.fill(LIGHTBLUE)
+        self.rect = self.image.get_rect()
+        self.rect.x = x
+        self.rect.y = y
+        self.birth = time.perf_counter_ns()
+        self.lifespan = 2000000000
 
     def update(self):
-        # Game Loop - Update
-        self.all_sprites.update()
-
-    def events(self):
-        # Game Loop - events
-        for event in pg.event.get():
-            # check for closing window
-            if event.type == pg.QUIT:
-                if self.playing:
-                    self.playing = False
-                self.running = False
-
-    def draw(self):
-        # Game Loop - draw
-        self.screen.fill(BLACK)
-        self.all_sprites.draw(self.screen)
-        # *after* drawing everything, flip the display
-        pg.display.flip()
-
-    def show_start_screen(self):
-        # game splash/start screen
-        pass
-
-    def show_go_screen(self):
-        # game over/continue
-        pass
-
-g = Game()
-g.show_start_screen()
-while g.running:
-    g.new()
-    g.show_go_screen()
-
-pg.quit()
-© 2020 GitHub, Inc.
-Terms
-Privacy
-Security
-Status
-Help
-Contact GitHub
-Pricing
-API
-Training
-Blog
-About
+        self.now = time.perf_counter_ns()
+        if self.now - self.birth > self.lifespan:
+            self.kill()
