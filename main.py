@@ -18,8 +18,9 @@ class Player(Sprite):
         self.rect = self.image.get_rect()
         self.rect.center = (WIDTH / 2, HEIGHT / 2)
         self.pos = vec(WIDTH / 2, HEIGHT / 2)
-        self.vel = vec(0, 0)
-        self.acc = vec(0, 0)
+        self.vel = vec(10, 50)
+        self.acc = vec(5, 2.5)
+        # vectors (x,y). ^ changed by me
         self.hitpoints = 100
     def pew(self):
         lazer = Pewpew(self.game, self.pos.x + self.rect.width/2, self.pos.y, 10, 10)
@@ -88,8 +89,9 @@ class Pewpew(Sprite):
         self.rect.y = y
         self.birth = time.perf_counter_ns()
         self.lifespan = 2000000000
-
+        # *nanoseconds^
     def update(self):
         self.now = time.perf_counter_ns()
+        # check time in game
         if self.now - self.birth > self.lifespan:
             self.kill()
